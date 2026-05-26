@@ -42,6 +42,14 @@ def on_connect():
     emit('status', {'running': running})
 
 
+@socketio.on('ping_status')
+def handle_ping():
+    global process
+    with process_lock:
+        running = process is not None and process.poll() is None
+    emit('status', {'running': running})
+
+
 @socketio.on('start')
 def handle_start():
     global process
