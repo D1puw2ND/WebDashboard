@@ -6,7 +6,7 @@ from flask import Flask, render_template
 from flask_socketio import SocketIO, emit
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dashboard-secret-key')
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'procwatch-secret-2026')
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='gevent')
 
 process = None
@@ -73,7 +73,6 @@ def handle_start():
             )
             emit('log', {'data': f'[DASHBOARD] Process dimulai. PID: {process.pid}'})
             socketio.emit('status', {'running': True})
-
             t = threading.Thread(target=stream_output, args=(process,), daemon=True)
             t.start()
         except Exception as e:
@@ -94,13 +93,12 @@ def handle_stop():
                 process.wait(timeout=3)
             except subprocess.TimeoutExpired:
                 process.kill()
-            emit('log', {'data': f'[DASHBOARD] Process dihentikan paksa. PID: {process.pid}'})
+            emit('log', {'data': f'[DASHBOARD] Process dihentikan paksa.'})
             socketio.emit('status', {'running': False})
         except Exception as e:
             emit('log', {'data': f'[DASHBOARD] Gagal stop: {e}'})
 
 
-# Tidak pakai socketio.run() — Railway pakai gunicorn + eventlet
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     socketio.run(app, host='0.0.0.0', port=port, debug=False, allow_unsafe_werkzeug=True)
