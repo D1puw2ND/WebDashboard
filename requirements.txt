@@ -3,3 +3,8 @@ flask-socketio
 gevent
 gevent-websocket
 gunicorn
+requests
+colorama
+beautifulsoup4
+pyfiglet
+tqdm
