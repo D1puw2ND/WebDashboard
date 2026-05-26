@@ -7,7 +7,7 @@ from flask_socketio import SocketIO, emit
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dashboard-secret-key')
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
 
 process = None
 process_lock = threading.Lock()
@@ -92,8 +92,7 @@ def handle_stop():
             emit('log', {'data': f'[DASHBOARD] Gagal stop: {e}'})
 
 
+# Tidak pakai socketio.run() — Railway pakai gunicorn + eventlet
 if __name__ == '__main__':
-    # Railway otomatis inject PORT via environment variable
     port = int(os.environ.get('PORT', 5000))
-    print(f"Dashboard berjalan di port {port}")
-    socketio.run(app, host='0.0.0.0', port=port, debug=False)
+    socketio.run(app, host='0.0.0.0', port=port, debug=False, allow_unsafe_werkzeug=True)
