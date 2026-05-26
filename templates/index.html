@@ -339,7 +339,15 @@
 </main>
 
 <script>
-  const socket = io();
+  const socket = io({
+    reconnection: true,
+    reconnectionAttempts: Infinity,
+    reconnectionDelay: 1000,
+    reconnectionDelayMax: 5000,
+    timeout: 20000,
+    pingInterval: 10000,
+    pingTimeout: 15000
+  });
   const terminal = document.getElementById('terminal');
   const cursor   = document.getElementById('cursor');
   const btnStart = document.getElementById('btn-start');
@@ -360,8 +368,22 @@
   updateClock();
 
   socket.on('connect',    () => addLine('[ WebSocket terhubung ke server ]', 'sys'));
-  socket.on('disconnect', () => { addLine('[ WebSocket terputus! ]', 'err'); setStatus(false); });
+  socket.on('disconnect', reason => {
+    addLine(`[ WebSocket terputus: ${reason} — mencoba reconnect... ]`, 'warn');
+  });
+  socket.on('reconnect_attempt', n => {
+    addLine(`[ Reconnect percobaan ke-${n}... ]`, 'warn');
+  });
+  socket.on('reconnect', () => {
+    addLine('[ WebSocket terhubung kembali! ]', 'info');
+    socket.emit('ping_status');
+  });
+  socket.on('reconnect_failed', () => {
+    addLine('[ Gagal reconnect. Refresh halaman manual. ]', 'err');
+    setStatus(false);
+  });
   socket.on('status',     d  => setStatus(d.running));
+  socket.on('ping_status', () => socket.emit('ping_status'));
   socket.on('log',        d  => { addLine(d.data); linesThisSec++; });
   socket.on('process_ended', d => {
     const code = d.code;
