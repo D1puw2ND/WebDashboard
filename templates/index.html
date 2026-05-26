@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Process Monitor</title>
+<title>ProcWatch</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet"/>
 <style>
@@ -21,229 +21,162 @@
     --glow-r:  0 0 20px rgba(255,59,92,.3);
   }
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
   body {
     background: var(--bg);
     color: var(--text);
     font-family: 'JetBrains Mono', monospace;
-    min-height: 100dvh;
+    height: 100dvh;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
   }
-
   body::before {
     content: '';
     position: fixed; inset: 0; z-index: 9999;
-    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,.06) 2px, rgba(0,0,0,.06) 4px);
+    background: repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.05) 2px,rgba(0,0,0,.05) 4px);
     pointer-events: none;
   }
 
-  /* ── Header ── */
+  /* Header */
   header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 12px 16px;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 11px 16px;
     border-bottom: 1px solid var(--border);
-    background: rgba(17,17,24,.97);
-    position: sticky; top: 0; z-index: 100;
-    flex-shrink: 0;
+    background: rgba(17,17,24,.98);
+    flex-shrink: 0; z-index: 100;
   }
   .brand { display: flex; align-items: center; gap: 10px; }
   .brand-icon {
-    width: 30px; height: 30px;
-    border: 1.5px solid var(--accent);
-    border-radius: 6px;
-    display: grid; place-items: center;
-    box-shadow: var(--glow);
+    width: 29px; height: 29px;
+    border: 1.5px solid var(--accent); border-radius: 6px;
+    display: grid; place-items: center; box-shadow: var(--glow);
   }
-  .brand-icon svg { width: 15px; height: 15px; }
-  .brand-name {
-    font-family: 'Syne', sans-serif;
-    font-weight: 800; font-size: 14px;
-    letter-spacing: .08em; color: #fff;
-  }
+  .brand-icon svg { width: 14px; height: 14px; }
+  .brand-name { font-family:'Syne',sans-serif; font-weight:800; font-size:14px; letter-spacing:.08em; color:#fff; }
   .brand-name span { color: var(--accent); }
-  .header-right { display: flex; align-items: center; gap: 12px; }
-
+  .header-right { display:flex; align-items:center; gap:10px; }
   .status-pill {
-    display: flex; align-items: center; gap: 6px;
-    padding: 4px 12px; border-radius: 100px;
-    border: 1px solid var(--border);
-    background: rgba(255,255,255,.03);
-    font-size: 10px; font-weight: 500;
-    letter-spacing: .06em; transition: all .3s;
+    display:flex; align-items:center; gap:6px;
+    padding:4px 11px; border-radius:100px;
+    border:1px solid var(--border);
+    font-size:10px; font-weight:500; letter-spacing:.06em;
+    transition: all .3s;
   }
-  .status-pill.running {
-    border-color: var(--accent);
-    background: rgba(0,255,136,.06);
-    box-shadow: var(--glow); color: var(--accent);
-  }
-  .status-pill.stopped { border-color: var(--muted); color: var(--muted); }
-  .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .status-pill.running { border-color:var(--accent); background:rgba(0,255,136,.06); box-shadow:var(--glow); color:var(--accent); }
+  .status-pill.stopped { border-color:var(--muted); color:var(--muted); }
+  .dot { width:6px; height:6px; border-radius:50%; background:currentColor; }
   .dot.pulse { animation: pulse 1.4s ease-in-out infinite; }
-  @keyframes pulse {
-    0%,100% { opacity: 1; transform: scale(1); }
-    50%      { opacity: .4; transform: scale(.7); }
-  }
-  #clock { font-size: 10px; color: var(--muted); letter-spacing: .06em; }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(.7)} }
+  #clock { font-size:10px; color:var(--muted); }
 
-  /* ── Main ── */
+  /* Main */
   main {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    padding: 14px 14px;
-    gap: 12px;
-    min-height: 0;
+    flex: 1; display: flex; flex-direction: column;
+    padding: 12px 14px; gap: 10px;
+    overflow: hidden; min-height: 0;
   }
 
-  /* ── Controls (TOP) ── */
-  .controls {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    flex-shrink: 0;
-  }
+  /* Controls */
+  .controls { display:flex; align-items:center; gap:9px; flex-shrink:0; }
   .btn {
-    display: flex; align-items: center; gap: 7px;
-    padding: 10px 22px; border-radius: 8px;
-    border: none; cursor: pointer;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 12px; font-weight: 500;
-    letter-spacing: .08em; transition: all .2s;
+    display:flex; align-items:center; gap:7px;
+    padding:10px 20px; border-radius:8px; border:none;
+    cursor:pointer; font-family:'JetBrains Mono',monospace;
+    font-size:12px; font-weight:500; letter-spacing:.08em;
+    transition: all .2s;
   }
-  .btn:active { transform: scale(.96); }
-  .btn:disabled { opacity: .35; cursor: not-allowed; }
-  .btn-start { background: var(--accent); color: #000; box-shadow: var(--glow); }
-  .btn-stop  { background: var(--danger); color: #fff; box-shadow: var(--glow-r); }
-  .btn svg { width: 13px; height: 13px; flex-shrink: 0; }
-  .spacer { flex: 1; }
+  .btn:active { transform:scale(.96); }
+  .btn:disabled { opacity:.35; cursor:not-allowed; }
+  .btn-start { background:var(--accent); color:#000; box-shadow:var(--glow); }
+  .btn-stop  { background:var(--danger); color:#fff; box-shadow:var(--glow-r); }
+  .btn svg { width:13px; height:13px; flex-shrink:0; }
+  .spacer { flex:1; }
   .autoscroll-wrap {
-    display: flex; align-items: center; gap: 6px;
-    font-size: 10px; color: var(--muted);
-    cursor: pointer; user-select: none;
+    display:flex; align-items:center; gap:6px;
+    font-size:10px; color:var(--muted); cursor:pointer; user-select:none;
   }
   .toggle {
-    width: 26px; height: 15px;
-    background: var(--border); border-radius: 100px;
-    position: relative; transition: background .2s;
+    width:26px; height:15px; background:var(--border);
+    border-radius:100px; position:relative; transition:background .2s;
   }
-  .toggle.on { background: var(--accent); }
+  .toggle.on { background:var(--accent); }
   .toggle::after {
-    content: ''; position: absolute;
-    top: 2px; left: 2px;
-    width: 11px; height: 11px;
-    border-radius: 50%; background: #fff;
-    transition: transform .2s;
+    content:''; position:absolute; top:2px; left:2px;
+    width:11px; height:11px; border-radius:50%; background:#fff;
+    transition:transform .2s;
   }
-  .toggle.on::after { transform: translateX(11px); }
+  .toggle.on::after { transform:translateX(11px); }
 
-  /* ── Stats ── */
-  .stats-bar {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 8px; flex-shrink: 0;
-  }
+  /* Stats */
+  .stats-bar { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; flex-shrink:0; }
   .stat-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 8px; padding: 10px 12px;
-    position: relative; overflow: hidden;
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:8px; padding:9px 11px; overflow:hidden; position:relative;
   }
   .stat-card::before {
-    content: ''; position: absolute;
-    top: 0; left: 0; right: 0; height: 2px;
-    background: var(--accent); opacity: 0; transition: opacity .3s;
+    content:''; position:absolute; top:0; left:0; right:0; height:2px;
+    background:var(--accent); opacity:0; transition:opacity .3s;
   }
-  .stat-card.active::before { opacity: 1; }
-  .stat-label {
-    font-size: 8px; letter-spacing: .1em;
-    color: var(--muted); text-transform: uppercase; margin-bottom: 4px;
-  }
-  .stat-value {
-    font-size: 16px; font-weight: 700;
-    color: var(--text); font-variant-numeric: tabular-nums;
-    transition: color .3s;
-  }
-  .stat-card.active .stat-value { color: var(--accent); }
+  .stat-card.active::before { opacity:1; }
+  .stat-label { font-size:8px; letter-spacing:.1em; color:var(--muted); text-transform:uppercase; margin-bottom:3px; }
+  .stat-value { font-size:15px; font-weight:700; color:var(--text); font-variant-numeric:tabular-nums; transition:color .3s; }
+  .stat-card.active .stat-value { color:var(--accent); }
 
-  /* ── Terminal ── */
+  /* Terminal */
   .terminal-wrap {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    display: flex; flex-direction: column;
-    flex: 1; min-height: 0;
-    overflow: hidden;
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:10px; display:flex; flex-direction:column;
+    flex:1; min-height:0; overflow:hidden;
   }
   .terminal-titlebar {
-    display: flex; align-items: center;
-    justify-content: space-between;
-    padding: 8px 14px;
-    border-bottom: 1px solid var(--border);
-    background: rgba(0,0,0,.3); flex-shrink: 0;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:8px 13px; border-bottom:1px solid var(--border);
+    background:rgba(0,0,0,.3); flex-shrink:0;
   }
-  .traffic-lights { display: flex; gap: 5px; }
-  .tl { width: 9px; height: 9px; border-radius: 50%; }
-  .tl.red    { background: #ff5f57; }
-  .tl.yellow { background: #ffbd2e; }
-  .tl.green  { background: #28c840; }
-  .terminal-title { font-size: 10px; color: var(--muted); letter-spacing: .06em; }
-  .terminal-actions { display: flex; gap: 6px; }
+  .traffic-lights { display:flex; gap:5px; }
+  .tl { width:9px; height:9px; border-radius:50%; }
+  .tl.red{background:#ff5f57} .tl.yellow{background:#ffbd2e} .tl.green{background:#28c840}
+  .terminal-title { font-size:10px; color:var(--muted); letter-spacing:.05em; }
+  .terminal-actions { display:flex; gap:5px; }
   .btn-tiny {
-    background: none; border: 1px solid var(--border);
-    border-radius: 4px; padding: 3px 8px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 9px; color: var(--muted);
-    cursor: pointer; transition: all .2s;
+    background:none; border:1px solid var(--border); border-radius:4px;
+    padding:3px 8px; font-family:'JetBrains Mono',monospace;
+    font-size:9px; color:var(--muted); cursor:pointer; transition:all .2s;
   }
-  .btn-tiny:hover { border-color: var(--accent); color: var(--accent); }
-
+  .btn-tiny:hover { border-color:var(--accent); color:var(--accent); }
   #terminal {
-    flex: 1; overflow-y: auto;
-    padding: 12px 14px;
-    font-size: 11.5px; line-height: 1.7;
-    min-height: 0;
+    flex:1; overflow-y:auto; padding:11px 13px;
+    font-size:11px; line-height:1.75; min-height:0;
   }
-  #terminal::-webkit-scrollbar { width: 3px; }
-  #terminal::-webkit-scrollbar-track { background: transparent; }
-  #terminal::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-
+  #terminal::-webkit-scrollbar { width:3px; }
+  #terminal::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
   .log-line {
-    display: flex; gap: 10px; align-items: baseline;
-    padding: 1px 0;
-    animation: fadeSlide .15s ease-out;
+    display:flex; gap:10px; align-items:baseline;
+    animation: fadeIn .12s ease-out;
   }
-  @keyframes fadeSlide {
-    from { opacity: 0; transform: translateY(3px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
-  .log-time  { color: var(--muted); font-size: 9px; flex-shrink: 0; user-select: none; }
-  .log-text  { color: var(--text); word-break: break-word; flex: 1; }
-  .log-line.sys  .log-text { color: var(--accent2); }
-  .log-line.err  .log-text { color: var(--danger); }
-  .log-line.warn .log-text { color: var(--warn); }
-  .log-line.info .log-text { color: var(--accent); }
-
+  @keyframes fadeIn { from{opacity:0;transform:translateY(3px)} to{opacity:1;transform:translateY(0)} }
+  .log-time  { color:var(--muted); font-size:9px; flex-shrink:0; user-select:none; }
+  .log-text  { color:var(--text); word-break:break-word; flex:1; }
+  .log-line.sys  .log-text { color:var(--accent2); }
+  .log-line.err  .log-text { color:var(--danger); }
+  .log-line.warn .log-text { color:var(--warn); }
+  .log-line.info .log-text { color:var(--accent); }
   .cursor {
-    display: inline-block; width: 7px; height: 13px;
-    background: var(--accent); margin-left: 3px;
-    vertical-align: middle;
-    animation: blink .8s step-end infinite; border-radius: 1px;
+    display:inline-block; width:7px; height:12px;
+    background:var(--accent); margin-left:3px; vertical-align:middle;
+    animation:blink .8s step-end infinite; border-radius:1px;
   }
-  @keyframes blink { 0%,100% { opacity:1; } 50% { opacity:0; } }
-  .cursor.hidden { display: none; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+  .cursor.hidden { display:none; }
 
-  /* ── Bottom bar ── */
+  /* Bottom */
   .bottom-bar {
-    display: flex; align-items: center;
-    justify-content: space-between;
-    flex-shrink: 0;
-    padding-top: 4px;
+    display:flex; align-items:center; justify-content:space-between;
+    flex-shrink:0; padding-top:4px;
   }
-  .log-count { font-size: 10px; color: var(--muted); }
-  .log-count span { color: var(--accent); font-weight: 700; }
+  .log-count { font-size:10px; color:var(--muted); }
+  .log-count span { color:var(--accent); font-weight:700; }
+  .hint { font-size:9px; color:var(--muted); }
 </style>
 </head>
 <body>
@@ -252,8 +185,7 @@
   <div class="brand">
     <div class="brand-icon">
       <svg viewBox="0 0 16 16" fill="none" stroke="#00ff88" stroke-width="1.5" stroke-linecap="round">
-        <polyline points="3,5 1,8 3,11"/>
-        <polyline points="13,5 15,8 13,11"/>
+        <polyline points="3,5 1,8 3,11"/><polyline points="13,5 15,8 13,11"/>
         <line x1="6" y1="3" x2="10" y2="13"/>
       </svg>
     </div>
@@ -269,8 +201,7 @@
 </header>
 
 <main>
-
-  <!-- ▶ CONTROLS — paling atas supaya langsung keliatan ── -->
+  <!-- CONTROLS — paling atas -->
   <div class="controls">
     <button class="btn btn-start" id="btn-start" onclick="startProcess()">
       <svg viewBox="0 0 16 16" fill="currentColor"><polygon points="4,2 14,8 4,14"/></svg>
@@ -287,7 +218,7 @@
     </label>
   </div>
 
-  <!-- Stats ── -->
+  <!-- STATS -->
   <div class="stats-bar">
     <div class="stat-card" id="stat-lines">
       <div class="stat-label">Lines</div>
@@ -307,13 +238,11 @@
     </div>
   </div>
 
-  <!-- Terminal ── -->
+  <!-- TERMINAL -->
   <div class="terminal-wrap">
     <div class="terminal-titlebar">
       <div class="traffic-lights">
-        <div class="tl red"></div>
-        <div class="tl yellow"></div>
-        <div class="tl green"></div>
+        <div class="tl red"></div><div class="tl yellow"></div><div class="tl green"></div>
       </div>
       <span class="terminal-title">main.py — output stream</span>
       <div class="terminal-actions">
@@ -330,112 +259,89 @@
     </div>
   </div>
 
-  <!-- Bottom bar ── -->
+  <!-- BOTTOM -->
   <div class="bottom-bar">
     <span class="log-count">Total: <span id="line-counter">0</span> lines</span>
-    <span style="font-size:9px;color:var(--muted);">ESC = force stop</span>
+    <span class="hint">ESC = force stop &nbsp;|&nbsp; F5 = start</span>
   </div>
-
 </main>
 
 <script>
   const socket = io({
     reconnection: true,
     reconnectionAttempts: Infinity,
-    reconnectionDelay: 1000,
+    reconnectionDelay: 1500,
     reconnectionDelayMax: 5000,
-    timeout: 20000,
-    pingInterval: 10000,
-    pingTimeout: 15000
+    timeout: 20000
   });
-  const terminal = document.getElementById('terminal');
-  const cursor   = document.getElementById('cursor');
-  const btnStart = document.getElementById('btn-start');
-  const btnStop  = document.getElementById('btn-stop');
 
-  let autoScroll = true;
-  let lineCount  = 0;
-  let startTime  = null;
-  let uptimeTimer = null;
+  const terminal  = document.getElementById('terminal');
+  const cursor    = document.getElementById('cursor');
+  const btnStart  = document.getElementById('btn-start');
+  const btnStop   = document.getElementById('btn-stop');
+
+  let autoScroll   = true;
+  let lineCount    = 0;
+  let startTime    = null;
+  let uptimeTimer  = null;
   let linesThisSec = 0;
-  let rateTimer  = null;
-  let logBuffer  = [];
+  let rateTimer    = null;
+  let logBuffer    = [];
 
-  function updateClock() {
+  // Clock
+  setInterval(() => {
     document.getElementById('clock').textContent = new Date().toTimeString().slice(0,8);
-  }
-  setInterval(updateClock, 1000);
-  updateClock();
+  }, 1000);
 
-  socket.on('connect',    () => addLine('[ WebSocket terhubung ke server ]', 'sys'));
-  socket.on('disconnect', reason => {
-    addLine(`[ WebSocket terputus: ${reason} — mencoba reconnect... ]`, 'warn');
-  });
-  socket.on('reconnect_attempt', n => {
-    addLine(`[ Reconnect percobaan ke-${n}... ]`, 'warn');
-  });
-  socket.on('reconnect', () => {
-    addLine('[ WebSocket terhubung kembali! ]', 'info');
+  // Socket
+  socket.on('connect', () => {
+    addLine('[ WebSocket terhubung ]', 'sys');
     socket.emit('ping_status');
   });
-  socket.on('reconnect_failed', () => {
-    addLine('[ Gagal reconnect. Refresh halaman manual. ]', 'err');
-    setStatus(false);
+  socket.on('disconnect', reason => {
+    addLine(`[ WebSocket terputus: ${reason} — reconnecting... ]`, 'warn');
   });
-  socket.on('status',     d  => setStatus(d.running));
-  socket.on('ping_status', () => socket.emit('ping_status'));
-  socket.on('log',        d  => { addLine(d.data); linesThisSec++; });
+  socket.on('reconnect', () => {
+    addLine('[ WebSocket terhubung kembali ]', 'info');
+    socket.emit('ping_status');
+  });
+  socket.on('status', d => setStatus(d.running));
+  socket.on('log',    d => { addLine(d.data); linesThisSec++; });
   socket.on('process_ended', d => {
-    const code = d.code;
-    addLine(`[ Process selesai. Exit code: ${code} ]`, code === 0 ? 'info' : 'err');
-    document.getElementById('val-exit').textContent = code;
+    addLine(`[ Process selesai. Exit code: ${d.code} ]`, d.code === 0 ? 'info' : 'err');
+    document.getElementById('val-exit').textContent = d.code;
     setStatus(false);
-    stopUptime();
+    if (uptimeTimer) { clearInterval(uptimeTimer); uptimeTimer = null; }
   });
 
   function setStatus(running) {
     const pill = document.getElementById('status-pill');
     const dot  = document.getElementById('status-dot');
-    const text = document.getElementById('status-text');
+    document.getElementById('status-text').textContent = running ? 'RUNNING' : 'STOPPED';
     pill.className = 'status-pill ' + (running ? 'running' : 'stopped');
     dot.className  = 'dot' + (running ? ' pulse' : '');
-    text.textContent = running ? 'RUNNING' : 'STOPPED';
     btnStart.disabled = running;
     btnStop.disabled  = !running;
     cursor.className  = 'cursor' + (running ? '' : ' hidden');
     ['stat-lines','stat-uptime','stat-rate'].forEach(id =>
-      document.getElementById(id).classList.toggle('active', running)
-    );
+      document.getElementById(id).classList.toggle('active', running));
   }
 
   function startProcess() {
     socket.emit('start');
     startTime = Date.now();
     document.getElementById('val-exit').textContent = '--';
-    startUptime(); startRate();
     addLine('[ Mengirim perintah START... ]', 'sys');
-  }
-
-  function stopProcess() {
-    socket.emit('stop');
-    addLine('[ Mengirim perintah FORCE STOP... ]', 'warn');
-  }
-
-  function startUptime() {
-    stopUptime();
+    // uptime
+    if (uptimeTimer) clearInterval(uptimeTimer);
     uptimeTimer = setInterval(() => {
-      if (!startTime) return;
       const s = Math.floor((Date.now() - startTime) / 1000);
-      const h = Math.floor(s/3600).toString().padStart(2,'0');
-      const m = Math.floor((s%3600)/60).toString().padStart(2,'0');
-      const sc = (s%60).toString().padStart(2,'0');
+      const h = String(Math.floor(s/3600)).padStart(2,'0');
+      const m = String(Math.floor(s%3600/60)).padStart(2,'0');
+      const sc = String(s%60).padStart(2,'0');
       document.getElementById('val-uptime').textContent = `${h}:${m}:${sc}`;
     }, 1000);
-  }
-  function stopUptime() {
-    if (uptimeTimer) { clearInterval(uptimeTimer); uptimeTimer = null; }
-  }
-  function startRate() {
+    // rate
     if (rateTimer) clearInterval(rateTimer);
     rateTimer = setInterval(() => {
       document.getElementById('val-rate').textContent = linesThisSec;
@@ -443,30 +349,28 @@
     }, 1000);
   }
 
+  function stopProcess() {
+    socket.emit('stop');
+    addLine('[ Mengirim perintah FORCE STOP... ]', 'warn');
+  }
+
   function addLine(text, type) {
     lineCount++;
     document.getElementById('val-lines').textContent = lineCount;
     document.getElementById('line-counter').textContent = lineCount;
     logBuffer.push({ time: new Date().toTimeString().slice(0,8), text, type });
-
     const line = document.createElement('div');
-    line.className = 'log-line' + (type ? ' ' + type : '');
-    const t = document.createElement('span');
-    t.className = 'log-time';
-    t.textContent = new Date().toTimeString().slice(0,8);
-    const s = document.createElement('span');
-    s.className = 'log-text';
-    s.textContent = text;
-    line.appendChild(t);
-    line.appendChild(s);
+    line.className = 'log-line' + (type ? ' '+type : '');
+    const t = document.createElement('span'); t.className='log-time'; t.textContent=new Date().toTimeString().slice(0,8);
+    const s = document.createElement('span'); s.className='log-text'; s.textContent=text;
+    line.appendChild(t); line.appendChild(s);
     terminal.insertBefore(line, cursor);
     if (autoScroll) terminal.scrollTop = terminal.scrollHeight;
   }
 
   function toggleAutoScroll() {
     autoScroll = !autoScroll;
-    const tog = document.getElementById('as-toggle');
-    tog.className = 'toggle' + (autoScroll ? ' on' : '');
+    document.getElementById('as-toggle').className = 'toggle' + (autoScroll ? ' on' : '');
     if (autoScroll) terminal.scrollTop = terminal.scrollHeight;
   }
 
@@ -479,8 +383,7 @@
   }
 
   function downloadLogs() {
-    const content = logBuffer.map(l => `[${l.time}] ${l.text}`).join('\n');
-    const blob = new Blob([content], { type: 'text/plain' });
+    const blob = new Blob([logBuffer.map(l=>`[${l.time}] ${l.text}`).join('\n')], {type:'text/plain'});
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = `procwatch_${new Date().toISOString().slice(0,19).replace(/:/g,'-')}.log`;
